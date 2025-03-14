@@ -72,6 +72,7 @@ def converti_esponente(valore):
         return float(base) ** float(esponente)
     return float(valore)
 
+
 def visualizza_grafico(iterazioni, funzione, x0, x_min, x_max):
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.set_title(f"Iterazione del Punto Fisso\n$g(x) = {funzione}$")
@@ -79,18 +80,36 @@ def visualizza_grafico(iterazioni, funzione, x0, x_min, x_max):
     ax.set_ylim(x_min, x_max)
     ax.grid(True)
 
+    # Preparazione grafica
     x_vals = np.linspace(x_min, x_max, 300)
     y_vals = [calcola_nuovo_valore_funzione(funzione, x) for x in x_vals]
-    ax.plot(x_vals, y_vals, 'b', label='g(x)')
-    ax.plot(x_vals, x_vals, 'k', label='y = x')
-    ax.legend(loc='upper right')  # Aggiunta legenda
+    line_gx, = ax.plot(x_vals, y_vals, 'b', label='g(x)')
+    line_yx, = ax.plot(x_vals, x_vals, 'k', label='y = x')
 
-    start_dot = ax.scatter([x0], [x0], color='green', s=100, zorder=5)
+    # Elementi animati con etichette
+    path_line, = ax.plot([], [], 'r--', lw=1, alpha=0.7, label='Percorso iterazioni')
+    start_dot = ax.scatter([x0], [x0], color='green', s=100, zorder=5, label='Punto iniziale (x0)')
+    end_dot = ax.scatter([], [], color='purple', s=100, zorder=5, label='Punto corrente')
 
-    path_line, = ax.plot([], [], 'r--', lw=1, alpha=0.7)
-    end_dot = ax.scatter([], [], color='purple', s=100, zorder=5)
-    text_artist = ax.text(0.02, 0.95, '', transform=ax.transAxes, va='top', ha='left',
-                          bbox=dict(facecolor='white', alpha=0.8))  # Testo per i valori
+    # Creazione legenda personalizzata
+    proxy_start = plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='green', markersize=10)
+    proxy_end = plt.Line2D([0], [0], marker='o', color='w', markerfacecolor='purple', markersize=10)
+    proxy_path = plt.Line2D([], [], color='red', linestyle='--')
+
+    ax.legend(
+        handles=[line_gx, line_yx, proxy_path, proxy_start, proxy_end],
+        labels=['g(x)', 'y = x', 'Percorso iterazioni', 'Punto iniziale (x0)', 'Punto corrente'],
+        loc='upper right'
+    )
+
+    # Testo animato
+    text_artist = ax.text(
+        0.02, 0.95, '',
+        transform=ax.transAxes,
+        va='top',
+        ha='left',
+        bbox=dict(facecolor='white', alpha=0.8)
+    )
 
     def init():
         path_line.set_data([], [])
@@ -101,27 +120,36 @@ def visualizza_grafico(iterazioni, funzione, x0, x_min, x_max):
     def animate(frame):
         current_data = iterazioni[:frame + 1]
 
+        # Costruisci percorso
         x_path, y_path = [], []
         for i in range(len(current_data)):
             if i == 0:
                 x_path.append(current_data[i])
                 y_path.append(current_data[i])
             else:
+                # Verticale
                 x_path.extend([current_data[i - 1], current_data[i - 1]])
                 y_path.extend([current_data[i - 1], current_data[i]])
+                # Orizzontale
                 x_path.extend([current_data[i - 1], current_data[i]])
                 y_path.extend([current_data[i], current_data[i]])
 
         path_line.set_data(x_path, y_path)
 
+        # Aggiorna punto finale
         if current_data:
             end_dot.set_offsets(np.array([[current_data[-1], current_data[-1]]]))
 
-        # Aggiorna testo con valori correnti
+        # Aggiorna testo con valori formattati
         if frame < len(iterazioni) - 1:
-            text_str = f"Iterazione {frame+1}\nx = {iterazioni[frame]:.5f}\ng(x) = {iterazioni[frame+1]:.5f}"
+            text_str = (f"Iterazione: {frame + 1}\n"
+                        f"xₙ = {iterazioni[frame]:.5f}\n"
+                        f"g(xₙ) = {iterazioni[frame + 1]:.5f}")
         else:
-            text_str = f"Iterazione {frame+1}\nx = {iterazioni[frame]:.5f} (finale)"
+            text_str = (f"Soluzione finale\n"
+                        f"x = {iterazioni[-1]:.5f}\n"
+                        f"Iterazioni: {len(iterazioni) - 1}")
+
         text_artist.set_text(text_str)
 
         return path_line, end_dot, text_artist
